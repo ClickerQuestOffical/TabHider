@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tab Transformer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #121212;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: #1e1e1e;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 350px;
+            text-align: center;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #252525;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #3d5afe;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover { background: #536dfe; }
+        button:disabled { background: #555; cursor: not-allowed; }
+
+        .loader {
+            display: none;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Tab Disguiser</h2>
+    <p style="font-size: 0.9rem; color: #888;">Enter a URL to clone its identity</p>
+    
+    <input type="text" id="urlInput" placeholder="google.com" autocomplete="off">
+    <button id="btn" onclick="disguiseTab()">Apply Disguise</button>
+    
+    <div id="loader" class="loader">Fetching site data...</div>
+</div>
+
+<script>
+    async function disguiseTab() {
+        const input = document.getElementById('urlInput').value.trim();
+        const btn = document.getElementById('btn');
+        const loader = document.getElementById('loader');
+        
+        if (!input) return alert("Please enter a URL");
+
+        // Format URL correctly
+        let targetUrl = input;
+        if (!targetUrl.startsWith('http')) {
+            targetUrl = 'https://' + targetUrl;
+        }
+
+        try {
+            btn.disabled = true;
+            loader.style.display = 'block';
+            
+            const domain = new URL(targetUrl).hostname;
+
+            // 1. SET THE ICON (Using Google's Favicon Service)
+            let link = document.querySelector("link[rel*='icon']");
+            if (!link) {
+                link = document.createElement('link');
+                link.rel = 'icon';
+                document.head.appendChild(link);
+            }
+            link.href = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+
+            // 2. FETCH THE ACTUAL TITLE
+            // We use a CORS proxy to get around browser security blocks
+            const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+            
+            const response = await fetch(proxy);
+            const data = await response.json();
+            
+            // Create a temporary parser to read the HTML from the proxy
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(data.contents, 'text/html');
+            const siteTitle = doc.querySelector('title') ? doc.querySelector('title').innerText : domain;
+
+            // Apply the real title to our tab
+            document.title = siteTitle;
+
+            loader.innerText = "Tab disguised as: " + siteTitle;
+            
+        } catch (error) {
+            console.error(error);
+            alert("Could not fetch the title. I'll just use the domain name.");
+            document.title = input;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
